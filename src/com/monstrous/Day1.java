@@ -6,7 +6,7 @@ public class Day1 {
 
     public Day1() {
         System.out.print("Day 1\n");
-        input = new FileInput("day1.txt");
+        input = new FileInput("data/day1.txt");
 
         int top[] = {-1, -1, -1};
         int elfCalories = 0;

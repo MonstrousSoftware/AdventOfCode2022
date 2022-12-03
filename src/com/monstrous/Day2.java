@@ -6,7 +6,7 @@ public class Day2 {
 
     public Day2() {
         System.out.print("Day 2\n");
-        input = new FileInput("day2.txt");
+        input = new FileInput("data/day2.txt");
         int total = 0;
         int total2 = 0;
 

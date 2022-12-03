@@ -7,7 +7,7 @@ import java.util.List;
 
 public class FileInput {
 
-    private List<String> lines = null;
+    public List<String> lines = null;
 
     public FileInput(String fileName) {
         try {
