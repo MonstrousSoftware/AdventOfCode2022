@@ -2,7 +2,7 @@ package com.monstrous;
 
 public class Day2 {
 
-    FileInput input;
+    final FileInput input;
 
     public Day2() {
         System.out.print("Day 2\n");
@@ -33,7 +33,7 @@ public class Day2 {
     }
 
     private int score(char them, char you ) {
-        int base = 0;
+        int base;
         switch(you) {
             case 'X': base = 1; break;
             case 'Y': base = 2; break;
@@ -51,7 +51,7 @@ public class Day2 {
     }
 
     private char choosePlay( char them, char goal ) {
-        char play = ' ';
+        char play;
         if(goal == 'X') {// lose
             switch(them) {
                 case 'A': play = 'Z'; break;

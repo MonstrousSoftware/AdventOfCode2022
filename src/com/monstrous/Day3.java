@@ -2,7 +2,7 @@ package com.monstrous;
 
 public class Day3 {
 
-    FileInput input;
+    final FileInput input;
 
     public Day3() {
         System.out.print("Day 3\n");
@@ -10,7 +10,7 @@ public class Day3 {
         int total = 0;
 
         for (String line : input.lines) {
-            int count[] = new int[53];
+            int[] count = new int[53];
             int len = line.length();
             for (int i = 0; i < len / 2; i++) {
                 count[priority( line.charAt(i))]++;
@@ -28,7 +28,7 @@ public class Day3 {
 
         int total2 = 0;
         for(int group = 0; group < input.lines.size()/3; group++) {
-            int count[] = new int[53];
+            int[] count = new int[53];
             int flag = 1;
             for (int elf = 0; elf < 3; elf++) {
                 String line = input.get(3 * group + elf);

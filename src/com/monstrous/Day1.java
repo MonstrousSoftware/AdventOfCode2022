@@ -2,13 +2,13 @@ package com.monstrous;
 
 public class Day1 {
 
-    FileInput input;
+    final FileInput input;
 
     public Day1() {
         System.out.print("Day 1\n");
         input = new FileInput("data/day1.txt");
 
-        int top[] = {-1, -1, -1};
+        int[] top = {-1, -1, -1};
         int elfCalories = 0;
         for (int i = 0; i < input.size(); i++) {
             String line = input.get(i);
