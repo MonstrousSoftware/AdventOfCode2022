@@ -1,12 +1,11 @@
 package com.monstrous;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class Day5 {
 
     final FileInput input;
-    private ArrayList[] towers = null;
+    private ArrayList<Character>[] towers = null;
 
     public Day5() {
         System.out.print("Day 5\n");
@@ -31,7 +30,7 @@ public class Day5 {
                     if (towers == null) {
                         towers = new ArrayList[cols + 1];
                         for (int i = 1; i <= cols; i++)
-                            towers[i] = new ArrayList<Character>();
+                            towers[i] = new ArrayList<>();
                     }
 
                     for (int col = 0; col < cols; col++) {
@@ -75,20 +74,20 @@ public class Day5 {
         System.out.println();
     }
 
-    private void move(int count, ArrayList from, ArrayList to ) {
+    private void move(int count, ArrayList<Character> from, ArrayList<Character> to ) {
         for(int i = 0; i < count; i++)
             moveOne(from, to);
     }
 
-    private void moveOne( ArrayList from, ArrayList to ) {
-        char crate = (char) from.get(0);
+    private void moveOne( ArrayList<Character> from, ArrayList<Character> to ) {
+        char crate = from.get(0);
         from.remove(0);
         to.add(0,crate);
     }
 
-    private void moveSubStack(int count, ArrayList from, ArrayList to ) {
+    private void moveSubStack(int count, ArrayList<Character> from, ArrayList<Character> to ) {
         for(int i = 0; i < count; i++) {
-            char crate = (char) from.get(i);
+            char crate = from.get(i);
             to.add(i, crate);
         }
         for(int i = 0; i < count; i++)
