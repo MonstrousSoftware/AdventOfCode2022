@@ -28,7 +28,7 @@ public class Day5 {
 
                     int cols = (line.length() + 1) / 4;
                     if (towers == null) {
-                        towers = new ArrayList[cols + 1];
+                        towers =  new ArrayList[cols + 1];
                         for (int i = 1; i <= cols; i++)
                             towers[i] = new ArrayList<>();
                     }
