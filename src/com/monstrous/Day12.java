@@ -1,11 +1,16 @@
 package com.monstrous;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.PriorityQueue;
 
 public class Day12 {
 
     class GridPoint {
         int x,y;
+        char z;
+        int distance;
 
         public GridPoint(int x, int y) {
             this.x = x;
@@ -30,6 +35,14 @@ public class Day12 {
         }
     }
 
+    class GridPointComparator implements Comparator<GridPoint> {
+
+        @Override
+        public int compare(GridPoint o1, GridPoint o2) {
+            return o1.distance - o2.distance;
+        }
+    }
+
     final FileInput input;
     char [][] matrix;
     int rows;
@@ -37,6 +50,7 @@ public class Day12 {
 
     public Day12() {
         System.out.print("Day 12\n");
+        final long startTime = System.currentTimeMillis();
         input = new FileInput("data/day12.txt");
 
         matrix = null;
@@ -74,98 +88,97 @@ public class Day12 {
 
         int steps2 = shortestPath(end, start, false, false);
         System.out.println("Steps for scenic route from point at level a: "+steps2);
+
+        final long endTime = System.currentTimeMillis();
+        System.out.println("\nTotal execution time (ms): " + (endTime - startTime));
     }
 
 
-    private int shortestPath(GridPoint start, GridPoint end, boolean goUp, boolean stopOnFind) {
-        int dist[][] = new int[rows][cols];
-        //GridPoint predecessor[][] = new GridPoint[rows][cols];
 
-        ArrayList<GridPoint> Q = new ArrayList<>();
+
+    private int shortestPath(GridPoint start, GridPoint end, boolean goUp, boolean stopOnFind) {
+
+        ArrayList<GridPoint> closed = new ArrayList<>();
+        PriorityQueue<GridPoint> Q = new PriorityQueue<>(16, new GridPointComparator());
+        HashMap<Integer, GridPoint> map = new HashMap<>();
         ArrayList<GridPoint> nbors = new ArrayList<>();
 
         for(int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
-                dist[i][j] = 999;
-                //predecessor[i][j] = null;
-                Q.add(new GridPoint(i, j));
+                GridPoint p = new GridPoint(i,j);
+                p.z = matrix[i][j];
+                if(p.equals(start))
+                    p.distance = 0;
+                else
+                    p.distance = 999999;
+                Q.add(p);
+                map.put(positionCode(i,j), p);
             }
         }
 
-        dist[start.x][start.y] = 0;
-
         while(Q.size() > 0) {
-            GridPoint closest = null;
-            int minDist = 9990;
-            for( GridPoint p : Q ) {
-                if (dist[p.x][p.y] < minDist) {
-                    minDist = dist[p.x][p.y];
-                    closest = p;
-                }
-            }
-            Q.remove(closest);
+
+            GridPoint closest = Q.poll();
             if(closest.equals(end) && stopOnFind)
-                return dist[end.x][end.y];
+                return closest.distance;
+            map.remove(positionCode(closest.x, closest.y));
+            closed.add(closest);
 
             GridPoint cand;
 
             nbors.clear();
             if(closest.x > 0 ) {
-                cand = new GridPoint(closest.x-1,closest.y);
-                if(Q.contains(cand) && canGoTo(closest, cand, goUp))
+                cand = map.get(positionCode(closest.x-1,closest.y));
+                if(cand != null && canGoTo(closest, cand, goUp))
                     nbors.add( cand );
             }
             if(closest.x < rows-1) {
-                cand = new GridPoint(closest.x+1,closest.y);
-                if(Q.contains(cand) && canGoTo(closest, cand, goUp))
+                cand = map.get(positionCode(closest.x+1,closest.y));
+                if(cand != null  && canGoTo(closest, cand, goUp))
                     nbors.add( cand );
             }
             if(closest.y > 0 ) {
-                cand = new GridPoint(closest.x,closest.y-1);
-                if(Q.contains(cand) && canGoTo(closest, cand, goUp))
+                cand = map.get(positionCode(closest.x,closest.y-1));
+                if(cand != null  && canGoTo(closest, cand, goUp))
                     nbors.add( cand );
             }
             if(closest.y < cols-1) {
-                cand = new GridPoint(closest.x,closest.y+1);
-                if(Q.contains(cand) && canGoTo(closest, cand, goUp))
+                cand = map.get(positionCode(closest.x,closest.y+1));
+                if(cand != null  && canGoTo(closest, cand, goUp))
                     nbors.add( cand );
             }
 
             for(GridPoint nbor : nbors ) {
-                int altDist = 1 + dist[closest.x][closest.y];
-                if(altDist < dist[nbor.x][nbor.y]) {
-                    dist[nbor.x][nbor.y] = altDist;
-                    //predecessor[nbor.x][nbor.y] = closest;
+                int altDist = 1 + closest.distance;
+                if(altDist < nbor.distance) {
+                    Q.remove(nbor);
+                    nbor.distance = altDist;
+                    Q.add(nbor);
                 }
             }
-            //System.out.println("closest "+closest.x+" , "+closest.y+" nbors:"+nbors.size());
-
         }
-//        for(int i = 0; i < rows; i++) {
-//            for (int j = 0; j < cols; j++) {
-//                System.out.print(dist[i][j] + "   ");
-//            }
-//            System.out.println();
+//        for(GridPoint p : closed) {
+//            System.out.println("grid ["+p.x+" , "+p.y+"] dist:"+p.distance +" ht:"+p.z);
 //        }
 
         // now find closest 'a'
         int minDist = Integer.MAX_VALUE;
-        for(int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                if(matrix[i][j] == 'a') {
-                    if(dist[i][j] < minDist)
-                        minDist = dist[i][j];
-                }
-            }
+        for(GridPoint p : closed) {
+            if(p.z == 'a' && p.distance < minDist)
+                minDist = p.distance;
         }
         return minDist;
     }
 
     private boolean canGoTo(GridPoint from, GridPoint to, boolean goUp) {
-        if(goUp)
-            return matrix[to.x][to.y] <= matrix[from.x][from.y]+1;    // not more than one level higher
+        if (goUp)
+            return to.z <= from.z + 1;
         else
-            return matrix[to.x][to.y] >= matrix[from.x][from.y]-1;    // not more than one level lower
+            return to.z >= from.z - 1;
+    }
+
+    private int positionCode( int x, int y ) {
+        return rows*y+ x;
     }
 
     private void printState() {
