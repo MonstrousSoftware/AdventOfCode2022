@@ -1,9 +1,13 @@
 package com.monstrous;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.PriorityQueue;
+import java.util.*;
+
+// tweaked for performance:
+// solve time ca. 32 ms
+// alternative with a PriorityQueue for Q does actually not speed things up
+// performance on 1MB input: 1.5 seconds
+// on 13MB input: 16.8 seconds
+
 
 public class Day12 {
 
@@ -19,27 +23,20 @@ public class Day12 {
 
         @Override
         public int hashCode() {
-            return x * 10000 + y;
+            return x * 100000 + y;
         }
 
         @Override
         public boolean equals(Object obj) {
-            if(obj == null)
-                return false;
+
             if(this == obj)
                 return true;
+            if(obj == null)
+                return false;
             if(getClass() != obj.getClass())
                 return false;
             GridPoint oth = (GridPoint)obj;
             return oth.x == x && oth.y == y;
-        }
-    }
-
-    class GridPointComparator implements Comparator<GridPoint> {
-
-        @Override
-        public int compare(GridPoint o1, GridPoint o2) {
-            return o1.distance - o2.distance;
         }
     }
 
@@ -49,8 +46,10 @@ public class Day12 {
     int cols;
 
     public Day12() {
-        System.out.print("Day 12\n");
         final long startTime = System.currentTimeMillis();
+
+        System.out.print("Day 12\n");
+
         input = new FileInput("data/day12.txt");
 
         matrix = null;
@@ -84,10 +83,10 @@ public class Day12 {
         matrix[end.x][end.y] = 'z';
 
         int steps = shortestPath(start, end, true, true);
-        System.out.println("Steps to reach goal: "+steps);
+        System.out.println("Steps to reach goal: " + steps);
 
         int steps2 = shortestPath(end, start, false, false);
-        System.out.println("Steps for scenic route from point at level a: "+steps2);
+        System.out.println("Steps for scenic route from point at level a: " + steps2);
 
         final long endTime = System.currentTimeMillis();
         System.out.println("\nTotal execution time (ms): " + (endTime - startTime));
@@ -98,8 +97,8 @@ public class Day12 {
 
     private int shortestPath(GridPoint start, GridPoint end, boolean goUp, boolean stopOnFind) {
 
-        ArrayList<GridPoint> closed = new ArrayList<>();
-        PriorityQueue<GridPoint> Q = new PriorityQueue<>(16, new GridPointComparator());
+        HashSet<GridPoint> closed = new HashSet<>();
+        ArrayList<GridPoint> Q = new ArrayList<>();
         HashMap<Integer, GridPoint> map = new HashMap<>();
         ArrayList<GridPoint> nbors = new ArrayList<>();
 
@@ -107,18 +106,28 @@ public class Day12 {
             for (int j = 0; j < cols; j++) {
                 GridPoint p = new GridPoint(i,j);
                 p.z = matrix[i][j];
-                if(p.equals(start))
+                if(p.equals(start)) {
                     p.distance = 0;
+                    Q.add(p);
+                }
                 else
-                    p.distance = 999999;
-                Q.add(p);
+                    p.distance = Integer.MAX_VALUE;
                 map.put(positionCode(i,j), p);
             }
         }
 
         while(Q.size() > 0) {
 
-            GridPoint closest = Q.poll();
+            GridPoint closest = null;
+            int minDistance = Integer.MAX_VALUE;
+            for( GridPoint p : Q ) {
+                if(p.distance < minDistance ) {
+                    minDistance = p.distance;
+                    closest = p;
+                }
+            }
+            Q.remove(closest);
+
             if(closest.equals(end) && stopOnFind)
                 return closest.distance;
             map.remove(positionCode(closest.x, closest.y));
@@ -151,10 +160,11 @@ public class Day12 {
             for(GridPoint nbor : nbors ) {
                 int altDist = 1 + closest.distance;
                 if(altDist < nbor.distance) {
-                    Q.remove(nbor);
                     nbor.distance = altDist;
-                    Q.add(nbor);
                 }
+                if(!Q.contains(nbor))
+                    Q.add(nbor);
+
             }
         }
 //        for(GridPoint p : closed) {
