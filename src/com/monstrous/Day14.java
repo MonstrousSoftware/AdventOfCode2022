@@ -20,7 +20,15 @@ public class Day14 {
             int maxy = Integer.MIN_VALUE;
             HashMap<Integer, Character> map = new HashMap<>();
 
+//            HashMap<String, Integer> lineCountMap = new HashMap<>();
+
             for (String line : input.lines) {
+
+//                int lc = 1;
+//                if(lineCountMap.containsKey(line))
+//                    lc = 1 + lineCountMap.get(line);
+//                lineCountMap.put(line, lc + 1);
+
                 // 503,4 -> 502,4 -> 502,9 -> 494,9
                 String[] words = line.split("[^0-9]+");
 
@@ -45,11 +53,11 @@ public class Day14 {
             int floor = maxy + 10;
             if(part == 2) {
                 int edge = 10;
-                addRockLine(map, minx - edge, maxy + 2, maxx + edge, maxy + 2);
                 maxy += 2;
+                floor = maxy;
+                addRockLine(map, minx - edge, floor, maxx + edge, floor); // for visualisation only
                 minx -= edge;
                 maxx += edge;
-                floor = maxy;
             }
 
             //printMap(map, minx, miny, maxx, maxy);
@@ -67,9 +75,17 @@ public class Day14 {
             System.out.println("Part "+part+": Units of sand dropped: " + count);
             // part 1: 885
             // part 2: 28691
+
+
+//            for(String key : lineCountMap.keySet()) {
+//                System.out.println("Appearances : " + lineCountMap.get(key)+" of key: "+key);
+//            }
+
         }
         final long endTime = System.currentTimeMillis();
         System.out.println("\nTotal execution time : " + (endTime - startTime)+" ms");
+
+
     }
 
     private void addRockLine(HashMap<Integer, Character> m, int x1, int y1, int x2, int y2) {
