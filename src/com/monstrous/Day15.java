@@ -83,6 +83,7 @@ public class Day15 {
         int scanned = scanLine(y, sensors, false, 0, 0);
         System.out.println("Part 1: Line "+y+" does not contain beacons in "+scanned+" positions");
 
+        // just brute force part 2
         for(y = 0; y <= SIZE; y++) {
             scanned = scanLine(y, sensors, true, 0, SIZE);
             if (scanned >= 0) {
