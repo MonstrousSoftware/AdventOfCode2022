@@ -21,8 +21,9 @@ public class Main {
 //        new Day13();
 //        new Day14();
 //        new Day15();
-        new Day16();      // to complete
+//        new Day16();      // to complete
 //        new Day17();
         // day 18 to merge
+        new Day19();
     }
 }
