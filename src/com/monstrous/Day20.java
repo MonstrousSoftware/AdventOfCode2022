@@ -68,6 +68,8 @@ public class Day20 {
 
         final long endTime = System.currentTimeMillis();
         System.out.println("\nTotal execution time : " + (endTime - startTime) + " ms");
+//        Part 1: sum is 13522
+//        Part 2: sum is 17113168880158
     }
 
 
@@ -117,7 +119,7 @@ public class Day20 {
                 //printCircle(circle);
 
                 Node curr = node;
-                value = ((value % max) + max)%max;
+                value = Math.floorMod(value, max);
                 if (value > 0) {
                     for (int j = 0; j < value; j++)
                         curr = curr.next;
