@@ -31,15 +31,17 @@ public class Day16 {
         }
     }
 
-    class State {
-        Room location;
-        int valveFlags;
-    }
+//    class State {
+//        Room location;
+//        Room location2;
+//        int valveFlags;
+//    }
 
     final FileInput input;
     ArrayList<Room> rooms;
     private int highScore;
     HashMap<Integer, Integer> stateMap;
+    int allFlags = 0;
 
     public Day16() {
         System.out.print("Day 16\n");
@@ -50,6 +52,7 @@ public class Day16 {
 
         Room start = null;
         int valveFlag = 1;
+
         int index = 0;
         rooms = new ArrayList<Room>();
         for (String line : input.lines) {
@@ -60,6 +63,7 @@ public class Day16 {
             int flag = 0;
             if(flowRate>0) {
                 flag = valveFlag;
+                allFlags |= flag;
                 valveFlag *= 2;
             }
             Room room = new Room(index++, flag, words[1], flowRate);
@@ -71,7 +75,7 @@ public class Day16 {
         }
 
         for (Room room : rooms) {
-            room.neighbours.add(room);      // add room itself as a 'neighbour'
+            //room.neighbours.add(room);      // add room itself as a 'neighbour'
             for (String nborName : room.neighbourNames) {
                 for (int i = 0; i < rooms.size(); i++) {
                     Room nbor = rooms.get(i);
@@ -96,23 +100,26 @@ public class Day16 {
         bestPath = new Room[TIME_LIMIT + 1];
         highScore = 0;
 
-        int flow = findBestRoute(start, 0, 0, path, 0);
+        int flow = findBestRoute(start, 0,  path, 0);
         System.out.println("Flow : " + flow);
-        System.out.println("Pressure release : " + highScore);
+        //System.out.println("Pressure release : " + highScore);
         // 1638 in 140 s
         // optimized to 5s
 
-        printPath(bestPath, highScore);
+        //printPath(bestPath, highScore);
 
 //        Room[] path1 = new Room[TIME_LIMIT2 + 1];
 //        bestPath1 = new Room[TIME_LIMIT2 + 1];
 //        Room[] path2 = new Room[TIME_LIMIT2 + 1];
 //        bestPath2 = new Room[TIME_LIMIT2 + 1];
-//        for(int i = 0; i < numValves; i++)
-//            opened[i] = false;
-//        findBestRoutes(start, start,0, 0, 0, path1, path2);
-//        printPath(bestPath1, highScore);
-//        printPath(bestPath2, highScore);
+
+        stateMap.clear();
+
+
+        int flow2 = findBestRoutes(start, start,0, path, 0);
+        System.out.println("Part 2: Flow : " + flow2);
+        //printPath(bestPath, highScore);
+        //printPath(bestPath2, highScore);
 
         final long endTime = System.currentTimeMillis();
         System.out.println("\nTotal execution time : " + (endTime - startTime) + " ms");
@@ -124,118 +131,124 @@ public class Day16 {
 
 
 
-    private int findBestRoute( Room current, int step,  int total, Room[] path, int valvesOpened) {
+    private int findBestRoute( Room current, int step,  Room[] path, int valvesOpened) {
+
+        int cachedFlow  = findState(current, current, valvesOpened, step);
+        if(cachedFlow >= 0)
+            return cachedFlow;
+
 
         int bestFlow = 0;
 
         path[step] = current;
         if(step == TIME_LIMIT) {
-//            printPath(path, total);
-            if(total > highScore) {
-                highScore = total;
-                for(int i = 0; i<path.length;i++)
-                    bestPath[i] = path[i];
-            }
-            return bestFlow;
+            bestFlow = 0;
         }
-
-//        int cachedFlow  = findState(current, valvesOpened, step);
-//        if(cachedFlow >= 0)
-//            return cachedFlow;
-
-        for (Room nbor : current.neighbours) {
-            int flow = 0;
-            if(nbor == current) {
-                if((current.valveFlag & valvesOpened) == current.valveFlag)
-                    continue;
-                flow = current.flowRate * (TIME_LIMIT-(step+1));
-                flow += findBestRoute(nbor, step+1,  total+flow, path, valvesOpened|current.valveFlag);
-            } else {
+        else if(valvesOpened == allFlags)    // we can stop when all valves are opened
+            bestFlow = 0;
+        else {
+            bestFlow = 0;
+            if ((current.valveFlag & valvesOpened) == 0) {
+                bestFlow = current.flowRate * (TIME_LIMIT - (step + 1));
+                bestFlow += findBestRoute(current, step + 1, path, valvesOpened | current.valveFlag);
+            }
+            for (Room nbor : current.neighbours) {
                 if (step > 0 && nbor == path[step - 1])  // avoid double backs
                     continue;
-                flow = findBestRoute(nbor, step + 1,  total, path, valvesOpened);
+                int flow = findBestRoute(nbor, step + 1, path, valvesOpened);
+                if (flow > bestFlow)
+                    bestFlow = flow;
             }
-            if(flow > bestFlow)
-                bestFlow = flow;
         }
-        addState(current, valvesOpened, bestFlow, step);
+        addState(current, current, valvesOpened, step, bestFlow);
         return bestFlow;
     }
 
-    private int stateCode(Room room, int valvesOpened, int steps) {
-        return valvesOpened*10000+room.index*100+steps;
+    private int stateCode(Room room, Room room2, int valvesOpened, int steps) {
+        return valvesOpened*1000000 + room.index*10000 + room2.index*100 + steps;
     }
 
 
-    private int findState(Room room, int valvesOpened, int steps) {
-        int code = stateCode(room, valvesOpened, steps);
+    private int findState(Room room, Room room2, int valvesOpened, int steps) {
+        int code = stateCode(room, room2, valvesOpened, steps);
         Integer flow = stateMap.get(code);
         if(flow == null)
             return -1;
         else {
-            System.out.println("cache: "+room.name+" flags: "+valvesOpened+" code:" + code + " flow: "+flow);
+            //System.out.println("cache: "+room.name+" flags: "+valvesOpened+" code:" + code + " flow: "+flow);
             return flow;
         }
     }
 
-    private void addState(Room room, int valvesOpened, int steps, int flow) {
+    private void addState(Room room, Room room2,int valvesOpened, int steps, int flow) {
 
-        int code = stateCode(room, valvesOpened, steps);
-//        System.out.println("add to cache: "+room.name+" flags: "+valvesOpened+" code:" + code + " flow: "+flow);
-        stateMap.put(code, flow);
+        int code = stateCode(room, room2, valvesOpened, steps);
+        Integer cachedFlow = stateMap.get(code);
+        if(cachedFlow == null) {
+            stateMap.put(code, flow);
+            System.out.println("add to cache: (" + room.name + "+"+room2.name+" flags: " + valvesOpened +  " steps:" + steps +") code:" + code +" flow: " + flow);
+        }
+        else if (flow > cachedFlow) {
+            stateMap.put(code, flow);
+            System.out.println("update cache: (" + room.name +"+"+room2.name+ " flags: " + valvesOpened +  " steps:" + steps +") code:" + code + " flow: " + flow);
+        }
+
     }
 
-//    private void findBestRoutes( Room current, Room current2, int step, int flow, int total, Room[] path1, Room[] path2){
-//
-//        path1[step] = current;
-//        path2[step] = current2;
-//        if(step == TIME_LIMIT2) {
-//            if(total > highScore) {
-//                highScore = total;
-//
-//                for(int i = 0; i<path1.length;i++)
-//                    bestPath1[i] = path1[i];
-//                for(int i = 0; i<path2.length;i++)
-//                    bestPath2[i] = path2[i];
-//                printPath(bestPath, highScore);
-//                printPath(bestPath2, highScore);
-//                System.out.println();
-//            }
-//            return;
-//        }
-//
-//        total += flow;
-//
-//
-//        for (Room nbor : current.neighbours) {
-//            int flow1 = 0;
-//            if (nbor == current) {
-//                if (current.valveFlag < 0 || opened[current.valveFlag] ) // valve is already open, or flow rate is 0
-//                    continue;                                               // skip
-//                opened[current.valveFlag] = true;   // open valve of this room
-//                flow1 = current.flowRate;
-//            }
-//            if (step > 0 && nbor == path1[step - 1])  // avoid double backs
-//                continue;
-//            for (Room nbor2 : current2.neighbours) {
-//
-//                int flow2 = 0;
-//                if (nbor2 == current2) {
-//                    if (current2.valveFlag < 0 || opened[current2.valveFlag] ) // valve is already open, or flow rate is 0
-//                        continue;                                               // skip
-//                    opened[current2.valveFlag] = true;   // open valve of this room
-//                    flow2 =  current2.flowRate;
-//                }
-//                if (step > 0 && nbor2 == path2[step - 1])  // avoid double backs
-//                    continue;
-//                findBestRoutes(nbor, nbor2, step + 1, flow + flow1+flow2, total, path1, path2);
-//                if (nbor2 == current2)
-//                    opened[current2.valveFlag] = false; // undo
-//            }
-//            if (nbor == current)
-//                opened[current.valveFlag] = false; // undo
-//        }
-//    }
+    private int findBestRoutes( Room current, Room current2, int step,  Room[] path, int valvesOpened) {
+
+        int cachedFlow  = findState(current, current2, valvesOpened, step);
+        if(cachedFlow >= 0)
+            return cachedFlow;
+
+
+        int bestFlow = 0;
+
+        path[step] = current;
+        if(step == TIME_LIMIT2) {
+            bestFlow = 0;
+        }
+        else if(valvesOpened == allFlags)    // we can stop when all valves are opened
+            bestFlow = 0;
+        else {
+            bestFlow = 0;
+            if (current.flowRate > 0 && (current.valveFlag & valvesOpened) == 0) {
+                int flow  = current.flowRate * (TIME_LIMIT2 - (step + 1));
+                for (Room nbor2 : current2.neighbours) {
+                    int flow2 = findBestRoutes(current, nbor2, step + 1,  path, valvesOpened| current.valveFlag);
+                    if (flow + flow2 > bestFlow)
+                        bestFlow = flow+flow2;
+                }
+                //bestFlow += findBestRoutes(current, current2, step + 1, total + bestFlow, path, valvesOpened | current.valveFlag);
+            }
+            if (current2.flowRate > 0 && (current2.valveFlag & valvesOpened) == 0) {
+                int flow = current2.flowRate * (TIME_LIMIT2 - (step + 1));
+                for (Room nbor : current.neighbours) {
+                    int flow2 = findBestRoutes(nbor, current2, step + 1,  path, valvesOpened| current2.valveFlag);
+                    if (flow + flow2 > bestFlow)
+                        bestFlow = flow+flow2;
+                }
+                //flow += findBestRoutes(current, current2, step + 1, total + flow, path, valvesOpened | current2.valveFlag);
+            }
+            if (current.flowRate > 0 && (current.valveFlag & valvesOpened) == 0 &&
+                    current2.flowRate > 0 && (current2.valveFlag & valvesOpened) == 0) {
+                int flow  = current.flowRate * (TIME_LIMIT2 - (step + 1));
+                int flow2 = current2.flowRate * (TIME_LIMIT2 - (step + 1));
+                int flow3 = findBestRoutes(current, current2, step + 1,  path, valvesOpened| current.valveFlag | current2.valveFlag);
+                if (flow + flow2 +flow3 > bestFlow)
+                    bestFlow = flow+flow2+flow3;
+            }
+            for (Room nbor : current.neighbours) {
+                for (Room nbor2 : current2.neighbours) {
+                    int flow = findBestRoutes(nbor, nbor2, step + 1, path, valvesOpened);
+                    if (flow > bestFlow)
+                        bestFlow = flow;
+                }
+            }
+        }
+        addState(current, current2, valvesOpened, step, bestFlow);
+        return bestFlow;
+    }
 
 
     private void printPath( Room[] path, int score) {
