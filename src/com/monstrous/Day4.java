@@ -6,6 +6,7 @@ public class Day4 {
 
     public Day4() {
         System.out.print("Day 4\n");
+        final long startTime = System.currentTimeMillis();
         input = new FileInput("data/day4.txt");
 
         int countInclusions = 0;
@@ -31,6 +32,9 @@ public class Day4 {
         }
         System.out.println("pairs with contained ranges: "+countInclusions);
         System.out.println("pairs with overlaps: "+countOverlaps);
+
+        final long endTime = System.currentTimeMillis();
+        System.out.println("\nTotal execution time : " + (endTime - startTime) + " ms");
     }
 
 
