@@ -30,6 +30,7 @@ public class Main {
 //        new Day21();
 //        new Day22();
 //        new Day23();
-        new Day24();
+//        new Day24();
+        new Day25();
     }
 }
