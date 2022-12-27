@@ -9,6 +9,7 @@ public class Day5 {
 
     public Day5() {
         System.out.print("Day 5\n");
+        final long startTime = System.currentTimeMillis();
         input = new FileInput("data/day5.txt");
 
         for(int part = 1; part <= 2; part++) {
@@ -60,6 +61,8 @@ public class Day5 {
             }
             //dumpTowers();
             printStackTops(part);
+            final long endTime = System.currentTimeMillis();
+            System.out.println("\nTotal execution time : " + (endTime - startTime) + " ms");
         }
 
     }
