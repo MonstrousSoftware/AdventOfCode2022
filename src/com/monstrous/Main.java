@@ -21,16 +21,16 @@ public class Main {
 //        new Day13();
 //        new Day14();
 //        new Day15();
-//        new Day16();      // to complete
+        new Day16();      // to complete
 //        new Day17();
 //          new Day18();
         // day 18 to merge
-//        new Day19();
+//      new Day19();
 //        new Day20();
 //        new Day21();
 //        new Day22();
 //        new Day23();
-//        new Day24();
-        new Day25();
+//        new Day24();  // to optimize
+//        new Day25();
     }
 }
