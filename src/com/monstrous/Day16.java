@@ -101,14 +101,15 @@ public class Day16 {
 
 
         int part1 = findBestPath(TIME_LIMIT, start, 0, 0);
-        System.out.println("Part 1(new): Flow = " + part1);
+        System.out.println("Part 1: Flow = " + part1);
 
         int part2 = getWinningCombination(start);
-        System.out.println("Part 2(new): Flow = " + part2);
+        System.out.println("Part 2: Flow = " + part2);
 
         final long endTime = System.currentTimeMillis();
         System.out.println("\nTotal execution time : " + (endTime - startTime) + " ms");
-
+        // Part 1: 1638
+        // Part 2: 2400
     }
 
 
