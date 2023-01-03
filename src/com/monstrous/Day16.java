@@ -110,6 +110,7 @@ public class Day16 {
         System.out.println("\nTotal execution time : " + (endTime - startTime) + " ms");
         // Part 1: 1638
         // Part 2: 2400
+        // 1.6 seconds
     }
 
 

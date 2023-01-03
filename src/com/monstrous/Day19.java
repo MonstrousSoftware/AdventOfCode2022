@@ -5,15 +5,16 @@ import java.util.HashMap;
 import java.util.Objects;
 
 public class Day19 {
+    final String FILE_NAME =  "data/day19.txt";
 
     final static int STEPS1 = 24;
     final static int STEPS2 = 32;
 
-    class Mineral {
+    static class Mineral {
         String name;
         int id;
     }
-    class Ingredient {
+    static class Ingredient {
         int amount;
         Mineral mineral;
 
@@ -22,7 +23,7 @@ public class Day19 {
             this.mineral = mineral;
         }
     }
-    class RobotRecipe {
+    static class RobotRecipe {
         Mineral robotType;
         ArrayList<Ingredient> ingredients;
 
@@ -31,7 +32,7 @@ public class Day19 {
             ingredients = new ArrayList<>();
         }
     }
-    class BluePrint {
+    static class BluePrint {
         int number;
         ArrayList<RobotRecipe> recipes;
 
@@ -40,14 +41,21 @@ public class Day19 {
             recipes = new ArrayList<>();
         }
     }
-    class StateVector {
-        char t;
+    static class StateVector {
+        char stepsLeft;
         char numRobots[];
         short unitsCollected[];
 
         public StateVector() {
             numRobots = new char[4];
             unitsCollected = new short[4];
+        }
+        public StateVector( StateVector oth ) {
+            this.stepsLeft = oth.stepsLeft;
+            for(int i = 0; i < 4; i++){
+                this.numRobots[i] = oth.numRobots[i];
+                this.unitsCollected[i] = oth.unitsCollected[i];
+            }
         }
 
         @Override
@@ -57,7 +65,7 @@ public class Day19 {
             if (!(obj instanceof StateVector))
                 return false;
             StateVector oth = (StateVector)obj;
-            if(t != oth.t)
+            if(stepsLeft != oth.stepsLeft)
                 return false;
             for(int i = 0; i < 4; i++){
                 if(oth.numRobots[i] != numRobots[i] || oth.unitsCollected[i] != unitsCollected[i])
@@ -68,7 +76,7 @@ public class Day19 {
 
         @Override
         public int hashCode() {
-            return Objects.hash(t, unitsCollected[0], unitsCollected[1], unitsCollected[2], unitsCollected[3], numRobots[0], numRobots[1], numRobots[2], numRobots[3]);
+            return Objects.hash(stepsLeft, unitsCollected[0], unitsCollected[1], unitsCollected[2], unitsCollected[3], numRobots[0], numRobots[1], numRobots[2], numRobots[3]);
         }
 
 
@@ -77,19 +85,21 @@ public class Day19 {
     final FileInput input;
     ArrayList<Mineral> minerals;
     ArrayList<BluePrint> bluePrints;
-    int unitsCollected[] = new int [4];
-    int numRobots[] = new int[4];
-    int robotCosts[][] = new int[4][3];     // [robot type][ingredients]
+    int robotCosts[][] = new int[4][4];     // [robot type][ingredients]
     int maxRobots[];
     int bestPerStep[];
     int steps;
     HashMap<StateVector, Integer> cacheMap = new HashMap<>();
-
+    private int best = -1;
+    private char path[] = new char [STEPS2];
+    int cacheHits = 0;
+    int statesVisited = 0;
+    int maxGeodeBots = 0;
 
     public Day19() {
         System.out.print("Day 19\n");
         final long startTime = System.currentTimeMillis();
-        input = new FileInput("data/day19a.txt");
+        input = new FileInput(FILE_NAME);
 
         minerals = new ArrayList<>();
         bluePrints = new ArrayList<>();
@@ -120,22 +130,18 @@ public class Day19 {
             bluePrints.add(bp);
         }
 
-
-        for(Mineral m : minerals )
-            System.out.println(" mineral "+m.id +" "+m.name);
+//        for(Mineral m : minerals )
+//            System.out.println(" mineral "+m.id +" "+m.name);
 
 
         int sum = 0;
+        steps = STEPS1;
+
         //for(BluePrint bp : bluePrints ) {
-        BluePrint bp = bluePrints.get(1); {
+            BluePrint bp = bluePrints.get(0); if(false) {
 
             //printBluePrint(bp);
 
-            for(int i = 0; i < 4; i++) {
-                unitsCollected[i] = 0;
-                numRobots[i] = 0;
-            }
-            numRobots[0] = 1;
             fillRobotCosts(bp);
             cacheMap.clear();
             maxRobots = new int[4]; // max robots to build per type
@@ -145,121 +151,217 @@ public class Day19 {
                         maxRobots[j] = robotCosts[i][j];
                 }
             }
-            steps = STEPS1;
+
             maxRobots[3] = steps;  // i.e. no limit
             best = -1;
+            cacheMap.clear();
+            StateVector start = new StateVector();
+            start.stepsLeft = STEPS1;
+            for(int j = 0; j < 4; j++){
+                start.unitsCollected[j] = 0;
+                start.numRobots[j] = 0;
+            }
+            start.numRobots[0] = 1;
+            best = -1;
+            cacheHits = 0;
+            statesVisited = 0;
+            maxGeodeBots = 0;
 
-            int geodes = simulate(steps, unitsCollected, numRobots);
+            int geodes = simulate(start);
             int quality = geodes*bp.number;
             sum += quality;
+            //System.out.println( " cache:" + cacheMap.size() + " hits:" + cacheHits+ "states visited: "+statesVisited);
 
 
             System.out.println("Nr of geodes: "+geodes);
-            System.out.println("Quality level: "+quality);
+            //System.out.println("Quality level: "+quality);
+
         }
 
-        System.out.println("Sum of Quality levels: "+sum);
+        System.out.println("Part 1: Sum of Quality levels: "+sum);
+
+        sum = 0;
+        steps = STEPS2;
+        //for(BluePrint bp : bluePrints ) {
+             bp = bluePrints.get(0); {
+
+            //printBluePrint(bp);
+
+            fillRobotCosts(bp);
+
+            maxRobots = new int[4]; // max robots to build per type
+            for(int i = 0; i < 4; i++) {
+                for(int j = 0; j < 3; j++) {    // ingredients
+                    if(robotCosts[i][j] > maxRobots[j])
+                        maxRobots[j] = robotCosts[i][j];
+                }
+            }
+
+            maxRobots[3] = steps;  // i.e. no limit
+            best = -1;
+            cacheMap.clear();
+            StateVector start = new StateVector();
+            start.stepsLeft = (char)steps;
+            for(int j = 0; j < 4; j++){
+                start.unitsCollected[j] = 0;
+                start.numRobots[j] = 0;
+            }
+            start.numRobots[0] = 1;
+            best = -1;
+            cacheHits = 0;
+            statesVisited = 0;
+            maxGeodeBots = 0;
+
+            int geodes = simulate(start);
+
+            System.out.println( " cache:" + cacheMap.size() + " hits:" + cacheHits+ "states visited: "+statesVisited);
+
+
+            System.out.println("Nr of geodes: "+geodes);
+            //System.out.println("Quality level: "+quality);
+
+        }
 
         final long endTime = System.currentTimeMillis();
         System.out.println("\nTotal execution time : " + (endTime - startTime) + " ms");
     }
 
-    private int best = -1;
-    private char path[] = new char [STEPS2];
-    //private StateVector key = new StateVector();
-
-    // returns number of cracked geodes
-    private int simulate(int t, int unitsCollected[], int numRobots[] ) {
+//    Minutes left 0 :     ore:3    clay:36    obsidian:11    geode:12    ore robots: 3    clay robots: 7    obsidian robots: 8    geode robots: 4
+//            001012222232333234343434
+//    Nr of geodes: 12
 
 
-        StateVector key = new StateVector();
-        key.t = (char)t;
-        for(int i = 0 ; i < 4; i++){
-            key.unitsCollected[i] = (short)unitsCollected[i];
-            key.numRobots[i] = (char)numRobots[i];
+
+
+    // recursive function
+    // returns max number of cracked geodes based on minerals and robots and time left
+    private int simulate(StateVector state ) {
+
+        //System.out.println((int)state.stepsLeft + " " + state.unitsCollected[3] + " cache:" + cacheMap.size() + " hits:" + cacheHits);
+        // end condition
+        if (state.stepsLeft == 0) {        // time's up
+            statesVisited++;
+            if (state.unitsCollected[3] > best) {          // nr of geodes cracked, new record?
+                printState(state);
+                for (int i = 0; i < steps; i++)
+                    System.out.print(path[i]);
+                System.out.println();
+                best = state.unitsCollected[3];
+            }
+            return state.unitsCollected[3];   // geodes cracked
         }
 
+        // check cache
+        Integer numGeodes = cacheMap.get(state);
+        if (numGeodes != null) {
+            cacheHits++;
+            return numGeodes;
+        }
 
-        //int key = makeKey(t, unitsCollected, numRobots);
-        if(cacheMap.containsKey(key))
-            return cacheMap.get(key);
-
+        if(state.numRobots[3] > maxGeodeBots)
+            maxGeodeBots = state.numRobots[3];
+        else if(upperBoundGeodes(state) <= maxGeodeBots)   // prune if we cannot beat the number of geode bots in time left
+            return 0;
 
         int bestScore = -1;
 
-        //printStatus(t, unitsCollected, numRobots);
-        if(t == 0) {
-            if(unitsCollected[3] > best) {
-                printStatus(t, unitsCollected, numRobots);
-                for(int i = 0; i < steps; i++)
-                    System.out.print(path[i]);
-                System.out.println();
-                best = unitsCollected[3];
-            }
-            return unitsCollected[3];   // geodes cracked
-        }
+        // try building a robot in this step
+        boolean canMakeGeodeBot = false;
+        for(int botType = 3; botType >= 0; botType--) {       // try to make each robot type, try most expensive ones first
+            if (state.numRobots[botType] > maxRobots[botType])
+                continue;
 
-//        if(unitsCollected[3] < bestPerStep[t] - 18)
-//            return 0;
+            if (botType == 3 && state.stepsLeft <= 1)
+                continue;
+            if (botType != 3 && state.stepsLeft <= 2)
+                continue;
+            if (botType == 1 && state.stepsLeft <= 3)
+                continue;
 
-        int unitsAtStart[] = new int[3];        // remember what we had at start of the time slot
-        for(int i = 0; i < 3; i++)
-            unitsAtStart[i] = unitsCollected[i];
-
-        // gathering
-        for(int i = 0; i < 4; i++) {
-            unitsCollected[i] += numRobots[i];
-        }
-
-        boolean madeGeodeBot = false;
-        for(int i = 3; i >= 0; i--) {       // try to make each robot type
-            boolean canMake = true;
-            for(int j = 0; j < 3; j++ ) {
-                if (unitsAtStart[j] < robotCosts[i][j])
-                    canMake = false;
-            }
-            if(canMake && numRobots[i] < maxRobots[i]) {
-                if(i == 3)
-                    madeGeodeBot = true;
-                numRobots[i]++;
-
-                for(int j = 0; j < 3; j++) {
-                    unitsCollected[j] -= robotCosts[i][j];
+            int[] costs = robotCosts[botType];
+            boolean canAfford = true;
+            boolean couldAfford = true;            // could we afford this robot last minute?
+            for (int j = 0; j < 3; j++) {
+                if (costs[j] > state.unitsCollected[j]) {
+                    canAfford = false;
+                    break;
                 }
-
-                path[steps - t] = (char) ('1' + i);
-                int score = simulate(t - 1, unitsCollected, numRobots);
-                if (score > bestScore)
-                    bestScore = score;
-
-                // undo
-                numRobots[i]--;
-                for(int j = 0; j < 3; j++)
-                    unitsCollected[j] += robotCosts[i][j];
-                //break;
+                if(state.unitsCollected[j] - state.numRobots[j] < costs[j])
+                    couldAfford = false;
             }
+            if (!canAfford) {
+                continue;
+            }
+            if(couldAfford && path[steps-(state.stepsLeft+1)] == '0') // don't pursue this branch, building a robot we could build in previous step
+                continue;
 
+            path[steps - state.stepsLeft] = (char) ('1' + botType);     // code for robot production, e.g. 1 for ore robot
+
+
+            StateVector branch = new StateVector();
+            branch.stepsLeft = (char)(state.stepsLeft-1);
+            for(int j = 0; j < 4; j++ ){
+                // subtract expenditure on building a bot, add profit from gathering
+                branch.unitsCollected[j] = (short)(state.unitsCollected[j] - costs[j] + state.numRobots[j]);
+                branch.numRobots[j] = state.numRobots[j];
+            }
+            branch.numRobots[botType]++;
+
+
+            int score = simulate(branch);
+            if (score > bestScore)
+                bestScore = score;
+
+            if(botType == 3)      {   // if we're able to make a geode bot, don't even consider making another bot
+                canMakeGeodeBot = true;
+                break;
+            }
 
         }
 
-        if(!madeGeodeBot) {
-            //printStatus(t, unitsCollected, numRobots);
-            path[steps - t] = '0';
-            int score = simulate(t - 1, unitsCollected, numRobots);
+        // if we can already build each type of robot, there is no point in saving up
+        // if we can make a geode bot, don't save up.
+        if( !canMakeGeodeBot) {
+            // or try waiting a step (just gather resources)
+            path[steps - state.stepsLeft] = '0';
+
+            StateVector branch = new StateVector();
+            branch.stepsLeft = (char)(state.stepsLeft-1);
+            for(int j = 0; j < 4; j++ ){
+                branch.unitsCollected[j] = (short)(state.unitsCollected[j]  + state.numRobots[j]);
+                branch.numRobots[j] = state.numRobots[j];
+            }
+            int score = simulate( branch );
             if (score > bestScore)
                 bestScore = score;
         }
-        // undo gathering
-        for(int i = 0; i < 4; i++) {
-            unitsCollected[i] -= numRobots[i];
-        }
 
-        cacheMap.put(key, bestScore);
+        cacheMap.put(state, bestScore);
 
         return bestScore;
     }
 
 
+    private int upperBoundGeodes( StateVector state ){
+        int sum = state.unitsCollected[3];
+        int bots = state.numRobots[3];
+        for(int i = state.stepsLeft; i > 0; i--){
+            sum += bots;
+            bots++;
+        }
+        return sum;
+    }
+
+
+
+    private void printState(StateVector state) {
+        System.out.print("Minutes left "+(int)state.stepsLeft +" : ");
+        for(int i = 0; i < 4; i++)
+            System.out.print("    "+minerals.get(i).name+":"+(int)state.unitsCollected[i]);
+        for(int i = 0; i < 4; i++)
+            System.out.print("    "+minerals.get(i).name+" robots: "+(int)state.numRobots[i]);
+        System.out.println();
+    }
 
     private void printStatus(int t, int unitsCollected[], int numRobots[]) {
 //        if(t < 20)
@@ -272,9 +374,24 @@ public class Day19 {
         System.out.println();
     }
 
+    private void printStats(int stepsLeft, int units0, int units1, int units2, int units3, int bots0, int bots1, int bots2, int bots3 ) {
+        System.out.print("Steps left "+stepsLeft +" : ");
+
+        System.out.print("  "+minerals.get(0).name+":"+units0);
+        System.out.print("  "+minerals.get(1).name+":"+units1);
+        System.out.print("  "+minerals.get(2).name+":"+units2);
+        System.out.print("  "+minerals.get(3).name+":"+units3);
+        System.out.print("  "+minerals.get(0).name+" robots: "+bots0);
+        System.out.print("  "+minerals.get(1).name+" robots: "+bots1);
+        System.out.print("  "+minerals.get(2).name+" robots: "+bots2);
+        System.out.print("  "+minerals.get(3).name+" robots: "+bots3);
+        System.out.println();
+    }
 
 
-    private Mineral findMineral( String name ) {
+
+
+        private Mineral findMineral( String name ) {
         for(Mineral m : minerals )
             if(m.name.contentEquals(name))
                 return m;
@@ -301,7 +418,7 @@ public class Day19 {
 
     private void fillRobotCosts( BluePrint bp ){
         for(int i = 0; i < 4; i++)
-            for(int j = 0; j < 3; j++)
+            for(int j = 0; j < 4; j++)
                 robotCosts[i][j] = 0;
 
         for( RobotRecipe r : bp.recipes ) {
