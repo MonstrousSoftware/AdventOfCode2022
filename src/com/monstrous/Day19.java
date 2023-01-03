@@ -137,8 +137,8 @@ public class Day19 {
         int sum = 0;
         steps = STEPS1;
 
-        //for(BluePrint bp : bluePrints ) {
-            BluePrint bp = bluePrints.get(0); if(false) {
+        for(BluePrint bp : bluePrints ) {
+           // BluePrint bp = bluePrints.get(0); if(false) {
 
             //printBluePrint(bp);
 
@@ -173,17 +173,17 @@ public class Day19 {
             //System.out.println( " cache:" + cacheMap.size() + " hits:" + cacheHits+ "states visited: "+statesVisited);
 
 
-            System.out.println("Nr of geodes: "+geodes);
+            //System.out.println("Nr of geodes: "+geodes);
             //System.out.println("Quality level: "+quality);
 
         }
 
         System.out.println("Part 1: Sum of Quality levels: "+sum);
 
-        sum = 0;
+        int product = 1;
         steps = STEPS2;
-        //for(BluePrint bp : bluePrints ) {
-             bp = bluePrints.get(0); {
+        for(int bpi = 0; bpi < 3; bpi++) {
+            BluePrint bp = bluePrints.get(bpi);
 
             //printBluePrint(bp);
 
@@ -199,7 +199,7 @@ public class Day19 {
 
             maxRobots[3] = steps;  // i.e. no limit
             best = -1;
-            cacheMap.clear();
+
             StateVector start = new StateVector();
             start.stepsLeft = (char)steps;
             for(int j = 0; j < 4; j++){
@@ -208,19 +208,26 @@ public class Day19 {
             }
             start.numRobots[0] = 1;
             best = -1;
+            cacheMap.clear();
             cacheHits = 0;
             statesVisited = 0;
             maxGeodeBots = 0;
 
             int geodes = simulate(start);
+            product *= geodes;
 
-            System.out.println( " cache:" + cacheMap.size() + " hits:" + cacheHits+ "states visited: "+statesVisited);
+            //System.out.println( " cache:" + cacheMap.size() + " hits:" + cacheHits+ "states visited: "+statesVisited);
 
 
             System.out.println("Nr of geodes: "+geodes);
             //System.out.println("Quality level: "+quality);
 
         }
+        System.out.println("Part 2: Product of geodes: "+product);
+
+        // part 1: 1294
+        // part 2: 13640
+        // duration 23 s
 
         final long endTime = System.currentTimeMillis();
         System.out.println("\nTotal execution time : " + (endTime - startTime) + " ms");
@@ -242,10 +249,10 @@ public class Day19 {
         if (state.stepsLeft == 0) {        // time's up
             statesVisited++;
             if (state.unitsCollected[3] > best) {          // nr of geodes cracked, new record?
-                printState(state);
-                for (int i = 0; i < steps; i++)
-                    System.out.print(path[i]);
-                System.out.println();
+//                printState(state);
+//                for (int i = 0; i < steps; i++)
+//                    System.out.print(path[i]);
+//                System.out.println();
                 best = state.unitsCollected[3];
             }
             return state.unitsCollected[3];   // geodes cracked
@@ -316,7 +323,6 @@ public class Day19 {
                 canMakeGeodeBot = true;
                 break;
             }
-
         }
 
         // if we can already build each type of robot, there is no point in saving up
