@@ -21,7 +21,7 @@ public class Day25 {
         for(String line : input.lines ) {
             long val = decode(line);
             sum += val;
-            System.out.println(line+"    "+val);
+            //System.out.println(line+"    "+val);
         }
         System.out.println("Sum = "+sum);
         System.out.println("Sum in SNAFU = "+encode(sum));

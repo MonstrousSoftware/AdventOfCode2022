@@ -1,13 +1,11 @@
 package com.monstrous;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.*;
 
 public class Day24 {
 
 
-    class Blizzard {
+    static class Blizzard {
         int x;
         int y;
         int startx;
@@ -27,42 +25,21 @@ public class Day24 {
         }
     }
 
-    static class Expedition implements Comparable<Expedition> {
-        int x;
-        int y;
-        int manhattan;                  // manhattan distance to the exit w/o obstacles
-        static char rep = 'E';
-        Expedition parent;
-
-        public Expedition(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-
-
-        @Override
-        public int compareTo(Expedition o) {
-            return manhattan - o.manhattan;
-        }
-    }
 
     final FileInput input;
 
     int rows;
     int cols;
-    char [][] grid;
-    ArrayList<Blizzard> blizzards = new ArrayList<>();
-    Expedition expedition;
+    char [][][] superGrid;
+    List<Blizzard> blizzards = new ArrayList<>();
     final int dx[] = { 0, 1, 0, -1, 0 };
     final int dy[] = { -1, 0, 1, 0, 0 };
     int startRow;
     int startCol;
     int exitRow;
     int exitCol;
-    int maxSteps;
-    Expedition endPoint;
-    boolean debug = false;
-    HashMap<Integer, Integer> cache; // x+y -> path length to exit
+    int period;
+
 
 
     public Day24() {
@@ -72,13 +49,11 @@ public class Day24 {
 
         rows = input.lines.size();
         cols = input.lines.get(0).length();
-        grid = new char[rows][cols];
 
         int row = 0;
         for(String line : input.lines ) {
             for(int x = 0; x < line.length(); x++) {
                 char k = line.charAt(x);
-                grid[row][x] = k;
                 switch(k) {
                     case '>':   blizzards.add( new Blizzard(x, row, 1, 0, k)); break;
                     case '<':   blizzards.add( new Blizzard(x, row, -1, 0, k)); break;
@@ -90,135 +65,96 @@ public class Day24 {
             row++;
         }
 
+        // period before blizzard cycle repeats
+        period = lcm(rows-2, cols-2);
+
+        // now build 3 dimensional grid of blizzard positions over time
+        superGrid = new char[period][rows][cols];
+        for(int time = 0; time < period; time++){
+            placeBlizzards(time+1);
+            constructGrid(superGrid[time]);
+        }
+        //printSuperGrid();
+
         //System.out.println("Blizzards: "+blizzards.size());
         startRow = 0;
         startCol = 1;
         exitRow = rows -1;
         exitCol = cols -2;
-        expedition = new Expedition(startCol, startRow );
-        expedition.parent = null;
-
-       maxSteps = 9999999;
-       cache = new HashMap<>();
-
-        int cost = findRoute(  0, expedition );
-        System.out.println("Part 1: Steps in route: "+cost);
-        //printRoute(cost, endPoint);
-
-        expedition.x = exitCol;
-        expedition.y = exitRow;
-        exitRow = startRow;
-        exitCol = startCol;
-
-        maxSteps = 9999999;
-        cache.clear();
-        int cost2 = findRoute(  cost, expedition );
-        System.out.println("Part 2: back to start: "+cost2);
 
 
-        expedition.x = startRow;
-        expedition.y = startRow;
-        exitRow = rows -1;
-        exitCol = cols -2;
-        maxSteps = 9999999;
-        cache.clear();
-        int cost3 = findRoute(  cost+cost2, expedition );
-        System.out.println("Part 2: back to end: "+cost3);
+        int steps = searchPath(   startCol, startRow,  exitCol, exitRow, 0 );
+        System.out.println("Part 1: Steps in route: "+steps);
+        int steps2 = searchPath(  exitCol, exitRow,  startCol, startRow, steps );
+        int steps3 = searchPath(   startCol, startRow, exitCol, exitRow, steps2 );
+        System.out.println("Part 2: Steps in route: "+steps3);
 
-        System.out.println("Part 2: "+(cost+cost2+cost3));
-
-
-
+        // part 1 : 290
+        // part 2 : 842
+        // 470 ms
 
         final long endTime = System.currentTimeMillis();
         System.out.println("\nTotal execution time : " + (endTime - startTime) + " ms");
     }
 
-    // find route to exit, return number of steps
-    // called recursively
+
+    private int coord(int x, int y){
+        return (y << 8) + x;
+    }
+
+
+    // Simplified type of BFS. For each time step go one slice down the 3 dimensional grid and make a set
+    // of cells that can be reached from the possible positions from the previous slice.
+    // The 3rd dimension is equivalent to time, so we don't have to keep track of steps taken or what the
+    // shortest path is.
+    // Note that the maze structure repeats every 'period' steps.
     //
-    private int findRoute( int level, Expedition exp ) {
+    private int searchPath(int x, int y, int endx, int endy, int time) {
+        Set<Integer> sliceSet = new HashSet<>();
+        Set<Integer> nextSliceSet = new HashSet<>();
 
-        int stateCode = stateCode( level, exp.x, exp.y);
-        Integer cost = cache.get(stateCode);
-        if(cost != null)
-            return cost;
+        sliceSet.add(coord(x,y));   // first slice (T = time) only has the start position in the set
 
-        if(exp.x == exitCol && exp.y == exitRow) {  // at exit
-            if(level < maxSteps) {     // put upper bound on # steps to cull searches
-                maxSteps = level;
-                endPoint = exp;             // keep track of best route
-                cache.put(stateCode, 0);
+        while(true) {
+            //System.out.println("time: "+time+" set size: "+sliceSet.size());
+            time++;
+            for(int cell : sliceSet ) {
+
+                if (cell == coord(endx, endy))
+                    return time+1;
+
+                int cx = cell % 256;
+                int cy = cell >> 8;
+                //System.out.println("Step "+time+" Removing closest: " + cx + ", " + cy + " in fringe:" + fringe.size());
+
+                // create neighbours and add them to set for next time step
+                for (int dir = 0; dir < 5; dir++) {  // 4 directions or stay put
+                    int nx = cx + dx[dir];
+                    int ny = cy + dy[dir];
+
+                    if (nx < 0 || ny < 0 || nx >= cols || ny >= rows)   // skip positions outside of grid
+                        continue;
+                    if (superGrid[(time + 1) % period][ny][nx] == '.') {    // viable option; empty cell
+                        nextSliceSet.add( coord(nx, ny) );
+                    }
+                }
             }
-            return 0;
+            sliceSet = nextSliceSet;
+            nextSliceSet = new HashSet<>();
         }
-
-        if(level > 1500)     // stuck in endless loop, prune this branch
-            return 999999;
-
-        if(level > maxSteps)    // don't need to pursue this branch, there are already faster routes to the exit
-            return 999999;
-
-//        System.out.println("Level "+level);
-//        placeBlizzards(level);
-//        constructGrid(exp);
-//        printGrid();
-
-        placeBlizzards(level+1);
-        constructGrid(null);
-
-        ArrayList<Expedition> options = new ArrayList<>();
-        for(int dir = 0; dir < 5; dir++) {  // 4 directions or stay put
-            int nx = exp.x+dx[dir];
-            int ny = exp.y+dy[dir];
-            if(nx < 0 || ny < 0 || nx >= cols || ny >= rows)
-                continue;
-            if(grid[ny][nx] == '.' ) { //|| grid[ny][nx] == 'E') {
-                Expedition e = new Expedition(nx, ny);
-                addManhattanDistance(e);
-                e.parent = exp;
-                options.add( e );
-                //System.out.println("Level "+level+" found option "+e.x+", "+e.y);
-             }
-        }
-        Collections.sort(options);      // sort by Manhattan distance
-        int shortestPath = 9999999;
-        for(Expedition e : options ) {
-            //System.out.println("Level "+level+" trying out option "+e.x+", "+e.y);
-            int pathLength = 1 + findRoute(level+1, e);
-            if(pathLength < shortestPath) {
-                shortestPath = pathLength;
-            }
-        }
-        cache.put(stateCode, shortestPath);
-        return shortestPath;
     }
 
-    private void addManhattanDistance(Expedition exp)
-    {
-        exp.manhattan = Math.abs(exp.x - exitCol) + Math.abs(exp.y - exitRow);
-    }
-
-    // use recursion to reverse the list
-    private void printRoute( int t, Expedition end ) {
-        if(end == null)
-            return;
-        printRoute(t-1, end.parent);
-        System.out.println("Step "+t+" position " + end.x + ", " + end.y);
-        placeBlizzards(t);
-        constructGrid(end);
-        printGrid();
-
-    }
-
-    private void printGrid() {
+    private void printSuperGrid(){
         for(int y = 0; y < rows; y++) {
-            for(int x = 0; x < cols; x++ )
-                System.out.print(grid[y][x]);
+            for(int t = 0; t < 5; t++) {
+                for (int x = 0; x < cols; x++)
+                    System.out.print(superGrid[t][y][x]);
+                System.out.print("   ");
+            }
             System.out.println();
         }
         System.out.println();
-    }
+     }
 
 
     private void placeBlizzards(int t) {
@@ -230,35 +166,11 @@ public class Day24 {
         }
     }
 
-    private boolean collidesWithBlizzard(int x, int y){
-        if(x < 1 || x == cols-1 || y < 1 || y == rows-1)
-            return true;
-        for(Blizzard blizzard: blizzards) {
-            if(x == blizzard.x && y == blizzard.y)
-                return true;
-        }
-        return false;
-    }
-
-    private void advanceExpedition() {
-        ArrayList<Expedition> options = new ArrayList<>();
-        for(int dir = 0; dir < 5; dir++) {
-            int nx = expedition.x+dx[dir];
-            int ny = expedition.y+dy[dir];
-            if(nx < 0 || ny < 0 || nx >= cols || ny >= rows)
-                continue;
-            if(grid[ny][nx] == '.' || grid[ny][nx] == 'E') {
-                options.add( new Expedition(nx, ny));
-                System.out.println("Option "+dir+" to position "+nx+", "+ny);
-            }
-        }
-    }
-
     private int mod(int a, int b) {
         return (((a % b) + b)%b);
     }
 
-    private void constructGrid(Expedition exp) {
+    private void constructGrid(char[][]grid) {
         for(int y = 0; y < rows; y++) {
             for(int x = 0; x < cols; x++ )
                 grid[y][x] = '.';
@@ -276,24 +188,18 @@ public class Day24 {
         for(Blizzard blizzard: blizzards) {
             grid[blizzard.y][blizzard.x] = blizzard.rep;
         }
-
-        if(exp != null) {
-            if(grid[exp.y][exp.x] != '.')
-                System.out.println("Invalid position!");
-            else
-                grid[exp.y][exp.x] = expedition.rep;
-        }
     }
 
-    private int stateCode(int t, int x, int y) {
-        if(t >= 2048)
-            System.out.println("t overflow "+t);
-        if(y >= 64)
-            System.out.println("y overflow");
-        if(x >= 128)
-            System.out.println("x overflow");
-        int code = (y << 20) | (x << 12) | t;
-        return code; //y * 32768 + x * 512 + t;
+    private int lcm(int a, int b) {
+        int max = Math.max(a,b);
+        int min = Math.min(a,b);
+
+        while(true) {
+            if (max % min == 0)
+                break;
+            max += Math.max(a,b);
+        }
+        return max;
     }
 
 }

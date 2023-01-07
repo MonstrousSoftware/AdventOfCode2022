@@ -44,7 +44,7 @@ public class Day7 {
 
         for (String line : input.lines) {
 
-            System.out.println(line);
+            //System.out.println(line);
 
             String[] words = line.split(" ");
 
